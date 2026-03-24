@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   Shield, Lock, Smartphone, Eye, EyeOff, ChevronLeft,
   CheckCircle, AlertCircle, Key
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { auth, db } from "../../lib/firebase";
+import { auth, db, sendOTPFn, verifyOTPFn } from "../../lib/firebase";
 import {
   updatePassword,
   reauthenticateWithCredential,
@@ -32,17 +32,20 @@ export default function SecurityPrivacyPage() {
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
   const [twoFALoading, setTwoFALoading] = useState(false);
   const [twoFAMsg, setTwoFAMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [twoFALoaded, setTwoFALoaded] = useState(false);
+
+  // OTP verification state
+  const [showOTPInput, setShowOTPInput] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpMsg, setOtpMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Load 2FA status from Firestore
-  if (!twoFALoaded && user) {
-    setTwoFALoaded(true);
+  useEffect(() => {
+    if (!user) return;
     getDoc(doc(db, "users", user.id)).then((snap) => {
-      if (snap.exists()) {
-        setTwoFAEnabled(snap.data()?.twoFAEnabled ?? false);
-      }
+      if (snap.exists()) setTwoFAEnabled(snap.data()?.twoFAEnabled ?? false);
     });
-  }
+  }, [user]);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,29 +87,72 @@ export default function SecurityPrivacyPage() {
     }
   };
 
+  // Step 1: Send OTP to email when toggling 2FA on
   const handleToggle2FA = async () => {
     if (!user) return;
+
+    // If disabling, just turn it off directly
+    if (twoFAEnabled) {
+      setTwoFALoading(true);
+      setTwoFAMsg(null);
+      try {
+        await updateDoc(doc(db, "users", user.id), { twoFAEnabled: false });
+        setTwoFAEnabled(false);
+        setTwoFAMsg({ type: "success", text: "Two-factor authentication disabled." });
+        setTimeout(() => setTwoFAMsg(null), 3000);
+      } catch {
+        setTwoFAMsg({ type: "error", text: "Failed to disable 2FA." });
+      } finally {
+        setTwoFALoading(false);
+      }
+      return;
+    }
+
+    // If enabling, send OTP first
     setTwoFALoading(true);
     setTwoFAMsg(null);
     try {
-      const newValue = !twoFAEnabled;
+      await sendOTPFn({ email: user.email, userId: user.id });
+      setShowOTPInput(true);
+      setTwoFAMsg({ type: "success", text: `OTP sent to ${user.email}` });
+    } catch (err: any) {
+      setTwoFAMsg({ type: "error", text: err?.message || "Failed to send OTP." });
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  // Step 2: Verify OTP and enable 2FA
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setOtpLoading(true);
+    setOtpMsg(null);
+    try {
+      await verifyOTPFn({ userId: user.id, otp });
       const ref = doc(db, "users", user.id);
       const snap = await getDoc(ref);
       if (snap.exists()) {
-        await updateDoc(ref, { twoFAEnabled: newValue });
+        await updateDoc(ref, { twoFAEnabled: true });
       } else {
-        await setDoc(ref, { twoFAEnabled: newValue }, { merge: true });
+        await setDoc(ref, { twoFAEnabled: true }, { merge: true });
       }
-      setTwoFAEnabled(newValue);
-      setTwoFAMsg({
-        type: "success",
-        text: newValue ? "Two-factor authentication enabled." : "Two-factor authentication disabled.",
-      });
+      setTwoFAEnabled(true);
+      setShowOTPInput(false);
+      setOtp("");
+      setTwoFAMsg({ type: "success", text: "Two-factor authentication enabled." });
       setTimeout(() => setTwoFAMsg(null), 3000);
-    } catch {
-      setTwoFAMsg({ type: "error", text: "Failed to update 2FA setting." });
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (msg.includes("expired")) {
+        setOtpMsg({ type: "error", text: "OTP has expired. Please request a new one." });
+      } else if (msg.includes("Invalid")) {
+        setOtpMsg({ type: "error", text: "Incorrect OTP. Please try again." });
+      } else {
+        setOtpMsg({ type: "error", text: "Verification failed. Please try again." });
+      }
     } finally {
-      setTwoFALoading(false);
+      setOtpLoading(false);
     }
   };
 
@@ -148,11 +194,8 @@ export default function SecurityPrivacyPage() {
           </div>
 
           <form onSubmit={handleChangePassword} className="p-5 space-y-4">
-            {/* Current Password */}
             <div>
-              <label className="block text-xs text-slate-500 mb-1.5" style={{ fontWeight: 600 }}>
-                CURRENT PASSWORD
-              </label>
+              <label className="block text-xs text-slate-500 mb-1.5" style={{ fontWeight: 600 }}>CURRENT PASSWORD</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
@@ -163,21 +206,14 @@ export default function SecurityPrivacyPage() {
                   required
                   className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrent(!showCurrent)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
+                <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                   {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            {/* New Password */}
             <div>
-              <label className="block text-xs text-slate-500 mb-1.5" style={{ fontWeight: 600 }}>
-                NEW PASSWORD
-              </label>
+              <label className="block text-xs text-slate-500 mb-1.5" style={{ fontWeight: 600 }}>NEW PASSWORD</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
@@ -188,26 +224,18 @@ export default function SecurityPrivacyPage() {
                   required
                   className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowNew(!showNew)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
+                <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                   {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {/* Strength indicator */}
               {newPassword && (
-                <div className="mt-2 flex gap-1">
+                <div className="mt-2 flex items-center gap-1">
                   {[1, 2, 3, 4].map((i) => (
-                    <div
-                      key={i}
-                      className={`h-1 flex-1 rounded-full transition-colors ${
-                        newPassword.length >= i * 3
-                          ? newPassword.length >= 10 ? "bg-emerald-500" : newPassword.length >= 7 ? "bg-yellow-400" : "bg-red-400"
-                          : "bg-slate-200"
-                      }`}
-                    />
+                    <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${
+                      newPassword.length >= i * 3
+                        ? newPassword.length >= 10 ? "bg-emerald-500" : newPassword.length >= 7 ? "bg-yellow-400" : "bg-red-400"
+                        : "bg-slate-200"
+                    }`} />
                   ))}
                   <span className="text-xs text-slate-400 ml-1">
                     {newPassword.length >= 10 ? "Strong" : newPassword.length >= 7 ? "Medium" : "Weak"}
@@ -216,11 +244,8 @@ export default function SecurityPrivacyPage() {
               )}
             </div>
 
-            {/* Confirm Password */}
             <div>
-              <label className="block text-xs text-slate-500 mb-1.5" style={{ fontWeight: 600 }}>
-                CONFIRM NEW PASSWORD
-              </label>
+              <label className="block text-xs text-slate-500 mb-1.5" style={{ fontWeight: 600 }}>CONFIRM NEW PASSWORD</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
@@ -231,26 +256,15 @@ export default function SecurityPrivacyPage() {
                   required
                   className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                   {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            {/* Message */}
             {passwordMsg && (
-              <div className={`flex items-center gap-2 text-sm px-4 py-3 rounded-xl ${
-                passwordMsg.type === "success"
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-red-50 text-red-600"
-              }`}>
-                {passwordMsg.type === "success"
-                  ? <CheckCircle className="w-4 h-4 shrink-0" />
-                  : <AlertCircle className="w-4 h-4 shrink-0" />}
+              <div className={`flex items-center gap-2 text-sm px-4 py-3 rounded-xl ${passwordMsg.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                {passwordMsg.type === "success" ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
                 {passwordMsg.text}
               </div>
             )}
@@ -283,42 +297,77 @@ export default function SecurityPrivacyPage() {
               <div className="flex-1 pr-4">
                 <p className="text-sm text-slate-900" style={{ fontWeight: 600 }}>Enable 2FA</p>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Add an extra layer of security to your account. You'll be asked for a verification code on login.
+                  A verification code will be sent to your email each time you enable or log in.
                 </p>
               </div>
               <button
                 onClick={handleToggle2FA}
                 disabled={twoFALoading}
-                className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-60 ${
-                  twoFAEnabled ? "bg-blue-600" : "bg-slate-200"
-                }`}
+                className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-60 ${twoFAEnabled ? "bg-blue-600" : "bg-slate-200"}`}
               >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
-                    twoFAEnabled ? "translate-x-6" : "translate-x-0"
-                  }`}
-                />
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${twoFAEnabled ? "translate-x-6" : "translate-x-0"}`} />
               </button>
             </div>
 
             {twoFAMsg && (
-              <div className={`mt-3 flex items-center gap-2 text-sm px-4 py-3 rounded-xl ${
-                twoFAMsg.type === "success"
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-red-50 text-red-600"
-              }`}>
-                {twoFAMsg.type === "success"
-                  ? <CheckCircle className="w-4 h-4 shrink-0" />
-                  : <AlertCircle className="w-4 h-4 shrink-0" />}
+              <div className={`mt-3 flex items-center gap-2 text-sm px-4 py-3 rounded-xl ${twoFAMsg.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                {twoFAMsg.type === "success" ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
                 {twoFAMsg.text}
               </div>
             )}
 
-            {twoFAEnabled && (
+            {/* OTP Input shown after sending */}
+            {showOTPInput && (
+              <form onSubmit={handleVerifyOTP} className="mt-4 space-y-3">
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1.5" style={{ fontWeight: 600 }}>
+                    ENTER 6-DIGIT CODE
+                  </label>
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/, "").slice(0, 6))}
+                    placeholder="000000"
+                    maxLength={6}
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-2xl tracking-widest"
+                    style={{ fontWeight: 700 }}
+                  />
+                </div>
+
+                {otpMsg && (
+                  <div className={`flex items-center gap-2 text-sm px-4 py-3 rounded-xl ${otpMsg.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                    {otpMsg.type === "success" ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+                    {otpMsg.text}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={otpLoading || otp.length !== 6}
+                    className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm transition-colors disabled:opacity-60"
+                    style={{ fontWeight: 600 }}
+                  >
+                    {otpLoading ? "Verifying..." : "Verify & Enable"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowOTPInput(false); setOtp(""); setOtpMsg(null); setTwoFAMsg(null); }}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm"
+                    style={{ fontWeight: 500 }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {twoFAEnabled && !showOTPInput && (
               <div className="mt-4 p-4 rounded-xl bg-blue-50 border border-blue-100">
                 <p className="text-xs text-blue-700" style={{ fontWeight: 600 }}>2FA is active</p>
                 <p className="text-xs text-blue-600 mt-1">
-                  Your account is protected with two-factor authentication. A verification code will be sent to <strong>{user?.email}</strong> on each login.
+                  Your account is protected. A verification code will be sent to <strong>{user?.email}</strong> on each login.
                 </p>
               </div>
             )}
