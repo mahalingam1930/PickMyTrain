@@ -89,7 +89,7 @@ export default function Layout() {
             {/* Right Side */}
             <div className="flex items-center gap-3">
               <LocalClock />
-              <button className="hidden md:flex w-9 h-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition-colors relative">
+              <button onClick={() => navigate("/notifications")} className="hidden md:flex w-9 h-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition-colors relative">
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
               </button>

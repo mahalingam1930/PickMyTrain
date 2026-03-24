@@ -144,14 +144,14 @@ export default function SearchResultsPage() {
           <p className="text-slate-500 text-sm">
             <span className="text-slate-900" style={{ fontWeight: 600 }}>{sorted.length} trains</span> found
           </p>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
             {/* Class Filter */}
-            <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 p-1">
+            <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 p-1 overflow-x-auto w-full sm:w-auto">
               {["SL", "3A", "2A", "1A"].map((cls) => (
                 <button
                   key={cls}
                   onClick={() => setFilterClass(cls)}
-                  className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-all whitespace-nowrap ${
                     filterClass === cls
                       ? "bg-blue-600 text-white shadow-sm"
                       : "text-slate-600 hover:bg-slate-100"
@@ -164,12 +164,12 @@ export default function SearchResultsPage() {
             </div>
 
             {/* Sort */}
-            <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 p-1">
+            <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 p-1 overflow-x-auto w-full sm:w-auto">
               {(["departure", "duration", "price", "rating"] as SortKey[]).map((s) => (
                 <button
                   key={s}
                   onClick={() => setSort(s)}
-                  className={`px-3 py-1.5 rounded-lg text-sm transition-all capitalize ${
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-all capitalize whitespace-nowrap ${
                     sort === s
                       ? "bg-blue-600 text-white shadow-sm"
                       : "text-slate-600 hover:bg-slate-100"
