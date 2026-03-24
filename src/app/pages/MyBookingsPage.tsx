@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   Ticket, Calendar, Clock, CheckCircle2,
@@ -13,15 +13,41 @@ const classInfo: Record<string, string> = {
 };
 
 const statusConfig = {
-  upcoming: { label: "Upcoming", color: "bg-blue-50 text-blue-700 border-blue-200", icon: Clock },
-  completed: { label: "Completed", color: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
+  upcoming: { label: "Confirmed", color: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
+  completed: { label: "Completed", color: "bg-blue-50 text-blue-700 border-blue-200", icon: Clock },
   cancelled: { label: "Cancelled", color: "bg-red-50 text-red-600 border-red-200", icon: XCircle },
 };
+
+function BookingSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 animate-pulse">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="h-6 w-24 bg-slate-200 rounded-full" />
+        <div className="h-4 w-32 bg-slate-100 rounded" />
+      </div>
+      <div className="flex items-center gap-4 mb-3">
+        <div className="h-7 w-20 bg-slate-200 rounded" />
+        <div className="flex-1 h-px bg-slate-100" />
+        <div className="h-7 w-20 bg-slate-200 rounded" />
+      </div>
+      <div className="flex gap-4">
+        <div className="h-4 w-24 bg-slate-100 rounded" />
+        <div className="h-4 w-20 bg-slate-100 rounded" />
+      </div>
+    </div>
+  );
+}
 
 export default function MyBookingsPage() {
   const { completedBookings, cancelBooking } = useBooking();
   const navigate = useNavigate();
+  const [initialLoading, setInitialLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "upcoming" | "completed" | "cancelled">("all");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setInitialLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -98,7 +124,11 @@ export default function MyBookingsPage() {
         </div>
 
         {/* Bookings List */}
-        {filtered.length === 0 ? (
+        {initialLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => <BookingSkeleton key={i} />)}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border border-slate-100">
             <Ticket className="w-12 h-12 text-slate-300 mx-auto mb-4" />
             <h3 className="text-slate-700 text-lg" style={{ fontWeight: 600 }}>No bookings found</h3>
