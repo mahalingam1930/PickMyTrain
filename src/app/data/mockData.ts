@@ -1,0 +1,137 @@
+import { Train } from "../context/BookingContext";
+
+export const mockTrains: Train[] = [
+  {
+    id: "train_001",
+    number: "12951",
+    name: "Mumbai Rajdhani",
+    from: "Mumbai Central",
+    to: "New Delhi",
+    departure: "16:25",
+    arrival: "08:15",
+    duration: "15h 50m",
+    date: "",
+    classes: [
+      { type: "SL", label: "Sleeper", price: 680, available: 42 },
+      { type: "3A", label: "AC 3 Tier", price: 1805, available: 18 },
+      { type: "2A", label: "AC 2 Tier", price: 2565, available: 8 },
+      { type: "1A", label: "AC First Class", price: 4320, available: 3 },
+    ],
+    amenities: ["pantry", "wifi", "charging"],
+    rating: 4.5,
+  },
+  {
+    id: "train_002",
+    number: "12953",
+    name: "August Kranti Rajdhani",
+    from: "Mumbai Central",
+    to: "New Delhi",
+    departure: "17:40",
+    arrival: "10:55",
+    duration: "17h 15m",
+    date: "",
+    classes: [
+      { type: "SL", label: "Sleeper", price: 590, available: 65 },
+      { type: "3A", label: "AC 3 Tier", price: 1560, available: 32 },
+      { type: "2A", label: "AC 2 Tier", price: 2200, available: 14 },
+      { type: "1A", label: "AC First Class", price: 3750, available: 6 },
+    ],
+    amenities: ["pantry", "charging"],
+    rating: 4.2,
+  },
+  {
+    id: "train_003",
+    number: "22209",
+    name: "Mumbai - New Delhi Duronto",
+    from: "Mumbai Central",
+    to: "New Delhi",
+    departure: "23:00",
+    arrival: "15:45",
+    duration: "16h 45m",
+    date: "",
+    classes: [
+      { type: "3A", label: "AC 3 Tier", price: 1920, available: 24 },
+      { type: "2A", label: "AC 2 Tier", price: 2780, available: 10 },
+      { type: "1A", label: "AC First Class", price: 4650, available: 2 },
+    ],
+    amenities: ["pantry", "wifi", "charging", "meals"],
+    rating: 4.7,
+  },
+  {
+    id: "train_004",
+    number: "19019",
+    name: "Mumbai Bandra Terminus Express",
+    from: "Mumbai Central",
+    to: "New Delhi",
+    departure: "06:10",
+    arrival: "07:50+1",
+    duration: "25h 40m",
+    date: "",
+    classes: [
+      { type: "SL", label: "Sleeper", price: 420, available: 120 },
+      { type: "3A", label: "AC 3 Tier", price: 1100, available: 56 },
+      { type: "2A", label: "AC 2 Tier", price: 1580, available: 22 },
+    ],
+    amenities: ["pantry"],
+    rating: 3.8,
+  },
+  {
+    id: "train_005",
+    number: "12263",
+    name: "Pune – Hazrat Nizamuddin Duronto",
+    from: "Mumbai Central",
+    to: "New Delhi",
+    departure: "11:05",
+    arrival: "06:00+1",
+    duration: "18h 55m",
+    date: "",
+    classes: [
+      { type: "SL", label: "Sleeper", price: 510, available: 80 },
+      { type: "3A", label: "AC 3 Tier", price: 1380, available: 45 },
+      { type: "2A", label: "AC 2 Tier", price: 1960, available: 18 },
+      { type: "1A", label: "AC First Class", price: 3240, available: 7 },
+    ],
+    amenities: ["pantry", "wifi", "meals"],
+    rating: 4.3,
+  },
+];
+
+export const popularRoutes = [
+  { from: "Mumbai", to: "Delhi", emoji: "🏙️", duration: "15h 50m", startingPrice: 680 },
+  { from: "Bangalore", to: "Chennai", emoji: "🌴", duration: "6h 30m", startingPrice: 320 },
+  { from: "Delhi", to: "Kolkata", emoji: "🏛️", duration: "17h 30m", startingPrice: 540 },
+  { from: "Mumbai", to: "Goa", emoji: "🏖️", duration: "9h 15m", startingPrice: 410 },
+  { from: "Hyderabad", to: "Pune", emoji: "🌆", duration: "11h 45m", startingPrice: 390 },
+  { from: "Chennai", to: "Bangalore", emoji: "🎯", duration: "6h 30m", startingPrice: 320 },
+];
+
+export const offers = [
+  {
+    title: "10% Off on AC Classes",
+    code: "AC10",
+    description: "Get 10% discount on all AC class bookings",
+    color: "from-blue-500 to-indigo-600",
+    validTill: "31 Mar 2026",
+  },
+  {
+    title: "Senior Citizen Discount",
+    code: "SENIOR40",
+    description: "40% off for passengers above 60 years",
+    color: "from-emerald-500 to-teal-600",
+    validTill: "31 Dec 2026",
+  },
+  {
+    title: "Weekend Travel Deal",
+    code: "WEEKEND20",
+    description: "20% off on weekend bookings",
+    color: "from-orange-500 to-rose-600",
+    validTill: "30 Apr 2026",
+  },
+];
+
+export const indianCities = [
+  "Mumbai Central", "New Delhi", "Bangalore City", "Chennai Central",
+  "Kolkata", "Hyderabad", "Pune", "Ahmedabad", "Jaipur", "Lucknow",
+  "Bhopal", "Indore", "Nagpur", "Surat", "Vadodara", "Kochi",
+  "Coimbatore", "Visakhapatnam", "Patna", "Agra", "Goa", "Chandigarh",
+];
