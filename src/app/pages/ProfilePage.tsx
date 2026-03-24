@@ -32,16 +32,16 @@ export default function ProfilePage() {
     {
       title: "Account",
       items: [
-        { icon: Shield, label: "Security & Privacy", desc: "Password, 2FA" },
-        { icon: Bell, label: "Notifications", desc: "Email, SMS alerts" },
-        { icon: CreditCard, label: "Saved Payment Methods", desc: "Cards, UPI IDs" },
+        { icon: Shield, label: "Security & Privacy", desc: "Password, 2FA", path: "/security-privacy" },
+        { icon: Bell, label: "Notifications", desc: "Email, SMS alerts", path: undefined },
+        { icon: CreditCard, label: "Saved Payment Methods", desc: "Cards, UPI IDs", path: undefined },
       ],
     },
     {
       title: "Support",
       items: [
-        { icon: Star, label: "Rate Our App", desc: "Share your feedback" },
-        { icon: Shield, label: "Help & Support", desc: "FAQs, Contact us" },
+        { icon: Star, label: "Rate Our App", desc: "Share your feedback", path: undefined },
+        { icon: Shield, label: "Help & Support", desc: "FAQs, Contact us", path: undefined },
       ],
     },
   ];
@@ -200,6 +200,7 @@ export default function ProfilePage() {
               {section.items.map((item) => (
                 <button
                   key={item.label}
+                  onClick={() => item.path && navigate(item.path)}
                   className="w-full flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors"
                 >
                   <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
