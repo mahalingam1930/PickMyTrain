@@ -33,7 +33,7 @@ export default function ProfilePage() {
       title: "Account",
       items: [
         { icon: Shield, label: "Security & Privacy", desc: "Password, 2FA", path: "/security-privacy" },
-        { icon: Bell, label: "Notifications", desc: "Email, SMS alerts", path: "/notifications" },
+        { icon: Bell, label: "Notifications", desc: "Email, SMS alerts", path: "/notification-settings" },
         { icon: CreditCard, label: "Saved Payment Methods", desc: "Cards, UPI IDs", path: "/saved-payments" },
       ],
     },

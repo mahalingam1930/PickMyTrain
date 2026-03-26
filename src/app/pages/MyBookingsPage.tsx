@@ -8,6 +8,15 @@ import { useBooking } from "../context/BookingContext";
 import { printTicket } from "../../lib/printTicket";
 import { motion, AnimatePresence } from "motion/react";
 
+function getEffectiveStatus(status: string, date: string): string {
+  if (status !== "upcoming") return status;
+  const journey = new Date(date);
+  journey.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return journey < today ? "completed" : "upcoming";
+}
+
 const classInfo: Record<string, string> = {
   SL: "Sleeper", "3A": "AC 3 Tier", "2A": "AC 2 Tier", "1A": "AC First Class",
 };
@@ -61,7 +70,7 @@ export default function MyBookingsPage() {
   };
 
   const filtered = completedBookings
-    .filter((b) => filter === "all" || b.status === filter)
+    .filter((b) => filter === "all" || getEffectiveStatus(b.status, b.date) === filter)
     .filter((b) =>
       !search ||
       b.bookingId.toLowerCase().includes(search.toLowerCase()) ||
@@ -145,17 +154,15 @@ export default function MyBookingsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filtered.map((booking, i) => {
-              const status = statusConfig[booking.status as keyof typeof statusConfig] || statusConfig.upcoming;
+            {filtered.map((booking) => {
+              const effectiveStatus = getEffectiveStatus(booking.status, booking.date);
+              const status = statusConfig[effectiveStatus as keyof typeof statusConfig] || statusConfig.upcoming;
               const StatusIcon = status.icon;
               const isExpanded = expandedId === booking.bookingId;
 
               return (
-                <motion.div
+                <div
                   key={booking.bookingId}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
                   className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-all"
                 >
                   <div className="p-5">
@@ -225,7 +232,7 @@ export default function MyBookingsPage() {
                         Download
                       </button>
 
-                      {booking.status === "upcoming" && confirmCancelId !== booking.bookingId && (
+                      {effectiveStatus === "upcoming" && confirmCancelId !== booking.bookingId && (
                         <button
                           onClick={() => setConfirmCancelId(booking.bookingId)}
                           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors text-sm"
@@ -298,7 +305,7 @@ export default function MyBookingsPage() {
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </motion.div>
+                </div>
               );
             })}
           </div>

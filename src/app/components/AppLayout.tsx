@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import { db } from '../../lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import {
   Train, Home, Ticket, User, LogOut, Menu, X, Bell, ChevronDown, Search
 } from 'lucide-react';
@@ -11,6 +13,17 @@ export default function AppLayout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, 'users', user.id, 'notifications'),
+      where('read', '==', false)
+    );
+    const unsub = onSnapshot(q, (snap) => setUnreadCount(snap.size));
+    return unsub;
+  }, [user]);
 
   if (!user) {
     navigate('/login', { replace: true });
@@ -66,10 +79,12 @@ export default function AppLayout() {
 
             {/* Right Actions */}
             <div className="flex items-center gap-3">
-              <button className="hidden md:flex w-9 h-9 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 transition-all relative">
+              <Link to="/notifications" className="hidden md:flex w-9 h-9 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 transition-all relative">
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full"></span>
-              </button>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full"></span>
+                )}
+              </Link>
 
               {/* Profile Dropdown */}
               <div className="relative">

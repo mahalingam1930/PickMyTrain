@@ -13,6 +13,7 @@ import MyBookingsPage from "./pages/MyBookingsPage";
 import ProfilePage from "./pages/ProfilePage";
 import SecurityPrivacyPage from "./pages/SecurityPrivacyPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 import SavedPaymentsPage from "./pages/SavedPaymentsPage";
 import PNRStatusPage from "./pages/PNRStatusPage";
 import VerifyTicketPage from "./pages/VerifyTicketPage";
@@ -78,6 +79,7 @@ export const router = createBrowserRouter([
       { path: "profile", element: <ProfilePage /> },
       { path: "security-privacy", element: <SecurityPrivacyPage /> },
       { path: "notifications", element: <NotificationsPage /> },
+      { path: "notification-settings", element: <NotificationSettingsPage /> },
       { path: "saved-payments", element: <SavedPaymentsPage /> },
       { path: "*", element: <Navigate to="/" replace /> },
     ],

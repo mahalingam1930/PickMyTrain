@@ -9,6 +9,7 @@ import {
   doc,
   getDoc,
   updateDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase";
@@ -149,10 +150,20 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     const b = completedBookings.find((x) => x.bookingId === bookingId);
     if (!b) return;
 
-    const q = query(collection(db, "bookings"), where("bookingId", "==", bookingId));
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    const q = query(collection(db, "bookings"), where("bookingId", "==", bookingId), where("userId", "==", userId));
     const snap = await getDocs(q);
     if (!snap.empty) {
       await updateDoc(doc(db, "bookings", snap.docs[0].id), { status: "cancelled" });
+      await addDoc(collection(db, "users", userId, "notifications"), {
+        type: "booking_cancelled",
+        title: "Booking Cancelled",
+        message: `Your journey from ${b.from} to ${b.to} on ${b.date} (PNR: ${bookingId}) has been cancelled.`,
+        createdAt: serverTimestamp(),
+        read: false,
+      });
     }
 
     const trainId = b.selectedTrain?.id;

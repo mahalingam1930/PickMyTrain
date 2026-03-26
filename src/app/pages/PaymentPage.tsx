@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { useBooking } from "../context/BookingContext";
 import { useAuth } from "../context/AuthContext";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { loadRazorpayScript } from "../../lib/razorpay";
 import BookingTimer from "../components/BookingTimer";
@@ -184,6 +184,15 @@ export default function PaymentPage() {
       status: "upcoming",
       bookedAt: new Date().toISOString(),
     });
+    if (user) {
+      await addDoc(collection(db, "users", user.id, "notifications"), {
+        type: "booking_confirmed",
+        title: "Booking Confirmed",
+        message: `Your journey from ${booking.from} to ${booking.to} on ${booking.date} is confirmed. PNR: ${bookingId}`,
+        createdAt: serverTimestamp(),
+        read: false,
+      });
+    }
     navigate("/confirmation");
   };
 
@@ -195,7 +204,12 @@ export default function PaymentPage() {
 
     // If no real key is configured, run in demo mode
     if (isPlaceholderKey) {
-      await completeBooking();
+      try {
+        await completeBooking();
+      } catch {
+        alert("Booking failed. Please try again.");
+        setProcessing(false);
+      }
       return;
     }
 

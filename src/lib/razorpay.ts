@@ -38,8 +38,9 @@ export function loadRazorpayScript(): Promise<boolean> {
     }
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
+    const timer = setTimeout(() => resolve(false), 10000);
+    script.onload = () => { clearTimeout(timer); resolve(true); };
+    script.onerror = () => { clearTimeout(timer); resolve(false); };
     document.body.appendChild(script);
   });
 }

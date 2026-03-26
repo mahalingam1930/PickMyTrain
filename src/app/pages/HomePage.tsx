@@ -8,7 +8,8 @@ import { useAuth } from "../context/AuthContext";
 import { useBooking } from "../context/BookingContext";
 import { popularRoutes, offers, indianCities } from "../data/mockData";
 import { motion } from "motion/react";
-import { format, addDays } from "date-fns";
+import { format, addDays, parse } from "date-fns";
+import { Calendar as CalendarPicker } from "../components/ui/calendar";
 
 const HERO_BG = "https://images.unsplash.com/photo-1645874197112-11a90125cf4f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0cmFpbiUyMHN0YXRpb24lMjBtb2Rlcm4lMjByYWlsd2F5JTIwcGxhdGZvcm18ZW58MXx8fHwxNzczODE1MTk0fDA&ixlib=rb-4.1.0&q=80&w=1080";
 
@@ -87,6 +88,7 @@ export default function HomePage() {
   const [passengers, setPassengers] = useState(booking.passengers || 1);
   const [travelClass, setTravelClass] = useState(booking.travelClass || "SL");
   const [tripType, setTripType] = useState<"oneway" | "roundtrip">("oneway");
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const swapCities = () => { const tmp = from; setFrom(to); setTo(tmp); };
 
@@ -240,17 +242,33 @@ export default function HomePage() {
               {/* Date */}
               <div className="flex-1 rounded-xl border border-slate-200 bg-slate-50 hover:border-blue-300 transition-colors p-4 relative">
                 <label className="text-xs text-slate-400 block mb-1" style={{ fontWeight: 600 }}>DEPARTURE DATE</label>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-blue-500" />
-                  <input
-                    type="date"
-                    value={date}
-                    min={format(new Date(), "yyyy-MM-dd")}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="bg-transparent text-slate-900 focus:outline-none flex-1"
-                    style={{ fontWeight: 500 }}
-                  />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setDatePickerOpen((o) => !o)}
+                  className="flex items-center gap-2 w-full text-left"
+                >
+                  <Calendar className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                  <span className="text-slate-900" style={{ fontWeight: 500 }}>
+                    {date ? format(parse(date, "yyyy-MM-dd", new Date()), "dd MMM yyyy") : "Select date"}
+                  </span>
+                </button>
+                {datePickerOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setDatePickerOpen(false)} />
+                    <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
+                      <CalendarPicker
+                        mode="single"
+                        selected={date ? parse(date, "yyyy-MM-dd", new Date()) : undefined}
+                        onSelect={(day) => {
+                          setDate(day ? format(day, "yyyy-MM-dd") : "");
+                          setDatePickerOpen(false);
+                        }}
+                        disabled={{ before: new Date() }}
+                        initialFocus
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Passengers */}
