@@ -8,7 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import { useBooking } from "../context/BookingContext";
 import { popularRoutes, offers, indianCities } from "../data/mockData";
 import { motion } from "motion/react";
-import { format, addDays, parse } from "date-fns";
+import { format, parse } from "date-fns";
 import { Calendar as CalendarPicker } from "../components/ui/calendar";
 
 const HERO_BG = "https://images.unsplash.com/photo-1645874197112-11a90125cf4f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0cmFpbiUyMHN0YXRpb24lMjBtb2Rlcm4lMjByYWlsd2F5JTIwcGxhdGZvcm18ZW58MXx8fHwxNzczODE1MTk0fDA&ixlib=rb-4.1.0&q=80&w=1080";
@@ -84,16 +84,16 @@ export default function HomePage() {
 
   const [from, setFrom] = useState(booking.from || "");
   const [to, setTo] = useState(booking.to || "");
-  const [date, setDate] = useState(booking.date || format(addDays(new Date(), 3), "yyyy-MM-dd"));
-  const [passengers, setPassengers] = useState(booking.passengers || 1);
-  const [travelClass, setTravelClass] = useState(booking.travelClass || "SL");
+  const [date, setDate] = useState("");
+  const [passengers, setPassengers] = useState(1);
+  const [travelClass, setTravelClass] = useState("");
   const [tripType, setTripType] = useState<"oneway" | "roundtrip">("oneway");
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const swapCities = () => { const tmp = from; setFrom(to); setTo(tmp); };
 
   const handleSearch = () => {
-    if (!from || !to) return;
+    if (!from || !to || !date || !travelClass) return;
     setBookingField("from", from);
     setBookingField("to", to);
     setBookingField("date", date);
@@ -304,9 +304,10 @@ export default function HomePage() {
                   <select
                     value={travelClass}
                     onChange={(e) => setTravelClass(e.target.value)}
-                    className="bg-transparent text-slate-900 focus:outline-none appearance-none"
+                    className={`bg-transparent focus:outline-none appearance-none ${travelClass ? "text-slate-900" : "text-slate-400"}`}
                     style={{ fontWeight: 500 }}
                   >
+                    <option value="" disabled>Select class</option>
                     {travelClasses.map((c) => (
                       <option key={c.value} value={c.value}>{c.label}</option>
                     ))}
@@ -318,7 +319,7 @@ export default function HomePage() {
             {/* Search Button */}
             <button
               onClick={handleSearch}
-              disabled={!from || !to}
+              disabled={!from || !to || !date || !travelClass}
               className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white transition-all hover:shadow-xl hover:shadow-blue-300/40 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
               style={{ fontSize: "1rem", fontWeight: 600 }}
             >

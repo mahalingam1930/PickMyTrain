@@ -16,6 +16,7 @@ import NotificationsPage from "./pages/NotificationsPage";
 import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 import SavedPaymentsPage from "./pages/SavedPaymentsPage";
 import PNRStatusPage from "./pages/PNRStatusPage";
+import RunningStatusPage from "./pages/RunningStatusPage";
 import VerifyTicketPage from "./pages/VerifyTicketPage";
 import { useAuth } from "./context/AuthContext";
 
@@ -76,6 +77,7 @@ export const router = createBrowserRouter([
       { path: "confirmation", element: <ConfirmationPage /> },
       { path: "my-bookings", element: <MyBookingsPage /> },
       { path: "pnr-status", element: <PNRStatusPage /> },
+      { path: "running-status", element: <RunningStatusPage /> },
       { path: "profile", element: <ProfilePage /> },
       { path: "security-privacy", element: <SecurityPrivacyPage /> },
       { path: "notifications", element: <NotificationsPage /> },

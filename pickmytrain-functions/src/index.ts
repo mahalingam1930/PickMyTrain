@@ -24,15 +24,18 @@ export const sendOTP = onCall(
   async (request) => {
     const { email, userId } = request.data;
 
-    if (!email || !userId) {
-      throw new HttpsError("invalid-argument", "Email and userId are required.");
+    if (!email) {
+      throw new HttpsError("invalid-argument", "Email is required.");
     }
 
     const otp = generateOTP();
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
 
+    // Use userId if provided (2FA flow), otherwise use sanitized email (registration flow)
+    const docKey = userId || email.replace(/[^a-zA-Z0-9]/g, "_");
+
     // Store OTP in Firestore
-    await db.collection("otps").doc(userId).set({ otp, expiresAt, email });
+    await db.collection("otps").doc(docKey).set({ otp, expiresAt, email });
 
     // Send email
     const transporter = nodemailer.createTransport({
@@ -75,13 +78,19 @@ export const sendOTP = onCall(
 
 // Verify OTP entered by user
 export const verifyOTP = onCall(async (request) => {
-  const { userId, otp } = request.data;
+  const { email, userId, otp } = request.data;
 
-  if (!userId || !otp) {
-    throw new HttpsError("invalid-argument", "userId and otp are required.");
+  if (!otp) {
+    throw new HttpsError("invalid-argument", "otp is required.");
+  }
+  if (!email && !userId) {
+    throw new HttpsError("invalid-argument", "email or userId is required.");
   }
 
-  const snap = await db.collection("otps").doc(userId).get();
+  // Use userId if provided (2FA flow), otherwise use sanitized email (registration flow)
+  const docKey = userId || (email as string).replace(/[^a-zA-Z0-9]/g, "_");
+
+  const snap = await db.collection("otps").doc(docKey).get();
 
   if (!snap.exists) {
     throw new HttpsError("not-found", "OTP not found. Please request a new one.");
@@ -90,7 +99,7 @@ export const verifyOTP = onCall(async (request) => {
   const data = snap.data()!;
 
   if (Date.now() > data.expiresAt) {
-    await db.collection("otps").doc(userId).delete();
+    await db.collection("otps").doc(docKey).delete();
     throw new HttpsError("deadline-exceeded", "OTP has expired. Please request a new one.");
   }
 
@@ -99,7 +108,7 @@ export const verifyOTP = onCall(async (request) => {
   }
 
   // OTP verified — delete it so it can't be reused
-  await db.collection("otps").doc(userId).delete();
+  await db.collection("otps").doc(docKey).delete();
 
   return { success: true };
 });

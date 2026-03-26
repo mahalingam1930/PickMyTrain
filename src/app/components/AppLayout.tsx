@@ -4,8 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../../lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import {
-  Train, Home, Ticket, User, LogOut, Menu, X, Bell, ChevronDown, Search
+  Train, Home, Ticket, User, LogOut, Menu, X, Bell, ChevronDown, Activity
 } from 'lucide-react';
+import NetworkAlert, { NetworkStatusIndicator } from './NetworkAlert';
 
 export default function AppLayout() {
   const { user, logout } = useAuth();
@@ -38,12 +39,14 @@ export default function AppLayout() {
   const navLinks = [
     { path: '/home', label: 'Home', icon: Home },
     { path: '/bookings', label: 'My Bookings', icon: Ticket },
+    { path: '/running-status', label: 'Running Status', icon: Activity },
   ];
 
   const isActive = (path: string) => location.pathname === path;
 
   return (
     <div className="min-h-screen bg-slate-50" style={{ fontFamily: 'Inter, sans-serif' }}>
+      <NetworkAlert />
       {/* Navbar */}
       <nav className="bg-white border-b border-slate-100 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -79,6 +82,7 @@ export default function AppLayout() {
 
             {/* Right Actions */}
             <div className="flex items-center gap-3">
+              <NetworkStatusIndicator />
               <Link to="/notifications" className="hidden md:flex w-9 h-9 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 transition-all relative">
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (

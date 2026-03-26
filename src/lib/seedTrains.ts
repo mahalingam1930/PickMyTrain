@@ -1,17 +1,17 @@
 import { collection, addDoc, getDocs, deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 
-const SEED_VERSION = 2;
+const SEED_VERSION = 3;
 
 const route = (
   from: string, to: string,
-  trains: { number: string; name: string; departure: string; arrival: string; duration: string; classes: { type: string; label: string; price: number; available: number }[]; amenities: string[]; rating: number }[]
+  trains: { number: string; name: string; departure: string; arrival: string; duration: string; classes: { type: string; label: string; price: number; available: number; waitlist?: number; rac?: number }[]; amenities: string[]; rating: number }[]
 ) => trains.map((t) => ({ ...t, from, to }));
 
 const trainData = [
   // ── Mumbai Central ────────────────────────────────────────────────────────
   ...route("Mumbai Central", "New Delhi", [
-    { number: "12951", name: "Mumbai Rajdhani", departure: "16:25", arrival: "08:15", duration: "15h 50m", classes: [{ type: "SL", label: "Sleeper", price: 680, available: 42 }, { type: "3A", label: "AC 3 Tier", price: 1805, available: 18 }, { type: "2A", label: "AC 2 Tier", price: 2565, available: 8 }, { type: "1A", label: "AC First Class", price: 4320, available: 3 }], amenities: ["pantry", "wifi", "charging"], rating: 4.5 },
+    { number: "12951", name: "Mumbai Rajdhani", departure: "16:25", arrival: "08:15", duration: "15h 50m", classes: [{ type: "SL", label: "Sleeper", price: 680, available: 0, rac: 4 }, { type: "3A", label: "AC 3 Tier", price: 1805, available: 0, waitlist: 12 }, { type: "2A", label: "AC 2 Tier", price: 2565, available: 5 }, { type: "1A", label: "AC First Class", price: 4320, available: 1 }], amenities: ["pantry", "wifi", "charging"], rating: 4.5 },
     { number: "12953", name: "August Kranti Rajdhani", departure: "17:40", arrival: "10:55", duration: "17h 15m", classes: [{ type: "SL", label: "Sleeper", price: 590, available: 65 }, { type: "3A", label: "AC 3 Tier", price: 1560, available: 32 }, { type: "2A", label: "AC 2 Tier", price: 2200, available: 14 }, { type: "1A", label: "AC First Class", price: 3750, available: 6 }], amenities: ["pantry", "charging"], rating: 4.2 },
     { number: "22209", name: "Mumbai Duronto", departure: "23:00", arrival: "15:45", duration: "16h 45m", classes: [{ type: "3A", label: "AC 3 Tier", price: 1920, available: 24 }, { type: "2A", label: "AC 2 Tier", price: 2780, available: 10 }, { type: "1A", label: "AC First Class", price: 4650, available: 2 }], amenities: ["pantry", "wifi", "meals"], rating: 4.7 },
     { number: "19019", name: "Bandra Terminus Express", departure: "06:10", arrival: "07:50", duration: "25h 40m", classes: [{ type: "SL", label: "Sleeper", price: 420, available: 120 }, { type: "3A", label: "AC 3 Tier", price: 1100, available: 56 }, { type: "2A", label: "AC 2 Tier", price: 1580, available: 22 }], amenities: ["pantry"], rating: 3.8 },
@@ -126,7 +126,7 @@ const trainData = [
 
   // ── New Delhi ─────────────────────────────────────────────────────────────
   ...route("New Delhi", "Kolkata", [
-    { number: "12301", name: "Howrah Rajdhani", departure: "16:55", arrival: "09:55", duration: "17h 00m", classes: [{ type: "3A", label: "AC 3 Tier", price: 1850, available: 28 }, { type: "2A", label: "AC 2 Tier", price: 2650, available: 12 }, { type: "1A", label: "AC First Class", price: 4450, available: 4 }], amenities: ["pantry", "wifi", "meals", "charging"], rating: 4.8 },
+    { number: "12301", name: "Howrah Rajdhani", departure: "16:55", arrival: "09:55", duration: "17h 00m", classes: [{ type: "3A", label: "AC 3 Tier", price: 1850, available: 0, waitlist: 8 }, { type: "2A", label: "AC 2 Tier", price: 2650, available: 0, rac: 2 }, { type: "1A", label: "AC First Class", price: 4450, available: 2 }], amenities: ["pantry", "wifi", "meals", "charging"], rating: 4.8 },
     { number: "12303", name: "Poorva Express", departure: "08:45", arrival: "09:30", duration: "24h 45m", classes: [{ type: "SL", label: "Sleeper", price: 540, available: 70 }, { type: "3A", label: "AC 3 Tier", price: 1420, available: 35 }, { type: "2A", label: "AC 2 Tier", price: 2050, available: 18 }], amenities: ["pantry", "charging"], rating: 4.0 },
     { number: "12305", name: "Kolkata Duronto", departure: "12:25", arrival: "05:10", duration: "16h 45m", classes: [{ type: "3A", label: "AC 3 Tier", price: 1980, available: 20 }, { type: "2A", label: "AC 2 Tier", price: 2860, available: 8 }], amenities: ["pantry", "wifi", "meals"], rating: 4.5 },
   ]),
@@ -145,7 +145,7 @@ const trainData = [
   ]),
 
   ...route("New Delhi", "Bangalore City", [
-    { number: "22691", name: "Rajdhani Express", departure: "20:30", arrival: "05:15", duration: "32h 45m", classes: [{ type: "3A", label: "AC 3 Tier", price: 2250, available: 18 }, { type: "2A", label: "AC 2 Tier", price: 3280, available: 8 }, { type: "1A", label: "AC First Class", price: 5480, available: 2 }], amenities: ["pantry", "wifi", "meals", "charging"], rating: 4.6 },
+    { number: "22691", name: "Rajdhani Express", departure: "20:30", arrival: "05:15", duration: "32h 45m", classes: [{ type: "3A", label: "AC 3 Tier", price: 2250, available: 0, waitlist: 21 }, { type: "2A", label: "AC 2 Tier", price: 3280, available: 0, rac: 3 }, { type: "1A", label: "AC First Class", price: 5480, available: 1 }], amenities: ["pantry", "wifi", "meals", "charging"], rating: 4.6 },
     { number: "12627", name: "Karnataka Express", departure: "22:30", arrival: "08:00", duration: "33h 30m", classes: [{ type: "SL", label: "Sleeper", price: 700, available: 55 }, { type: "3A", label: "AC 3 Tier", price: 1860, available: 26 }, { type: "2A", label: "AC 2 Tier", price: 2680, available: 10 }], amenities: ["pantry", "charging"], rating: 4.1 },
   ]),
   ...route("Bangalore City", "New Delhi", [

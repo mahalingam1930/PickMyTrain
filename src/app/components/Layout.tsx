@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router";
 import {
   Train, Ticket, User, LogOut, Menu, X, Bell, ChevronDown,
@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { motion, AnimatePresence } from "motion/react";
+import NetworkAlert, { NetworkStatusIndicator } from "./NetworkAlert";
 
 function LocalClock() {
   const [time, setTime] = useState(new Date());
@@ -49,6 +50,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <NetworkAlert />
       {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -88,6 +90,7 @@ export default function Layout() {
 
             {/* Right Side */}
             <div className="flex items-center gap-3">
+              <NetworkStatusIndicator />
               <LocalClock />
               <button onClick={() => navigate("/notifications")} className="hidden md:flex w-9 h-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition-colors relative">
                 <Bell className="w-5 h-5" />

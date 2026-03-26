@@ -37,7 +37,7 @@ export default function LoginPage() {
     setResetLoading(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     if (!email || !password) {

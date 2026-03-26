@@ -2,13 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   ArrowRight, Wifi, Coffee, Zap, Star, ChevronDown,
-  ArrowLeftRight, Train, AlertCircle, ChevronUp, Loader2
+  ArrowLeftRight, Train, AlertCircle, ChevronUp, Loader2,
+  MapPin
 } from "lucide-react";
 import { useBooking } from "../context/BookingContext";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { motion, AnimatePresence } from "motion/react";
 import { format, parseISO } from "date-fns";
+import { getTrainStops } from "../../lib/trainStops";
 
 const classInfo: Record<string, string> = {
   SL: "Sleeper", "3A": "AC 3 Tier", "2A": "AC 2 Tier", "1A": "AC First Class",
@@ -50,7 +52,7 @@ interface TrainDoc {
   arrival: string;
   duration: string;
   date: string;
-  classes: { type: string; label: string; price: number; available: number }[];
+  classes: { type: string; label: string; price: number; available: number; waitlist?: number; rac?: number }[];
   amenities: string[];
   rating: number;
 }
@@ -60,6 +62,7 @@ export default function SearchResultsPage() {
   const navigate = useNavigate();
   const [sort, setSort] = useState<SortKey>("departure");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedTab, setExpandedTab] = useState<Record<string, "classes" | "route">>({});
   const [filterClass, setFilterClass] = useState(booking.travelClass || "SL");
   const [trains, setTrains] = useState<TrainDoc[]>([]);
   const [loading, setLoading] = useState(true);
@@ -256,25 +259,42 @@ export default function SearchResultsPage() {
                   {/* Class Pills & Book Button */}
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex flex-wrap gap-2">
-                      {train.classes.map((cls) => (
+                      {train.classes.map((cls) => {
+                        const isWL = cls.available === 0 && (cls.waitlist ?? 0) > 0;
+                        const isRAC = cls.available === 0 && (cls.rac ?? 0) > 0 && !isWL;
+                        const availLabel = isWL
+                          ? `WL ${cls.waitlist}`
+                          : isRAC
+                          ? `RAC ${cls.rac}`
+                          : `AVBL ${cls.available}`;
+                        const availColor = isWL
+                          ? "text-red-500"
+                          : isRAC
+                          ? "text-amber-500"
+                          : cls.available < 10
+                          ? "text-orange-500"
+                          : "text-emerald-600";
+                        return (
                         <button
                           key={cls.type}
-                          onClick={() => handleSelectTrain(train, cls.type)}
+                          onClick={() => !isWL && handleSelectTrain(train, cls.type)}
+                          disabled={isWL}
                           className={`px-3 py-1.5 rounded-xl border text-sm transition-all ${
                             cls.type === filterClass
                               ? "border-blue-600 bg-blue-50 text-blue-700"
                               : "border-slate-200 bg-slate-50 text-slate-600 hover:border-blue-300"
-                          }`}
+                          } disabled:opacity-60 disabled:cursor-not-allowed`}
                           style={{ fontWeight: 500 }}
                         >
                           <span style={{ fontWeight: 600 }}>{cls.type}</span>
                           <span className="text-slate-400 mx-1">·</span>
                           ₹{cls.price}
-                          <span className={`ml-1.5 text-xs ${cls.available < 10 ? "text-red-500" : "text-emerald-600"}`}>
-                            ({cls.available})
+                          <span className={`ml-1.5 text-xs ${availColor}`} style={{ fontWeight: 600 }}>
+                            {availLabel}
                           </span>
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -310,26 +330,110 @@ export default function SearchResultsPage() {
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden border-t border-slate-100"
                     >
-                      <div className="p-5 bg-slate-50 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        {train.classes.map((cls) => (
-                          <div key={cls.type} className="bg-white rounded-xl p-4 text-center border border-slate-100">
-                            <div className="text-xs text-slate-400 mb-1" style={{ fontWeight: 600 }}>{cls.label}</div>
-                            <div className="text-blue-600 text-lg" style={{ fontWeight: 700 }}>₹{cls.price}</div>
-                            <div className="text-xs mt-1">
-                              <span className={cls.available < 10 ? "text-red-500" : "text-emerald-600"} style={{ fontWeight: 500 }}>
-                                {cls.available} seats left
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => handleSelectTrain(train, cls.type)}
-                              className="mt-2 w-full py-1.5 rounded-lg bg-blue-600 text-white text-xs hover:bg-blue-700 transition-colors"
-                              style={{ fontWeight: 600 }}
-                            >
-                              Book
-                            </button>
-                          </div>
+                      {/* Tabs */}
+                      <div className="flex border-b border-slate-100 bg-white px-5">
+                        {(["classes", "route"] as const).map((tab) => (
+                          <button
+                            key={tab}
+                            onClick={() => setExpandedTab((prev) => ({ ...prev, [train.id]: tab }))}
+                            className={`px-4 py-2.5 text-sm capitalize border-b-2 transition-colors ${
+                              (expandedTab[train.id] || "classes") === tab
+                                ? "border-blue-600 text-blue-600"
+                                : "border-transparent text-slate-500 hover:text-slate-700"
+                            }`}
+                            style={{ fontWeight: 500 }}
+                          >
+                            {tab === "classes" ? "Seat Availability" : "Train Route"}
+                          </button>
                         ))}
                       </div>
+
+                      {/* Classes Tab */}
+                      {(expandedTab[train.id] || "classes") === "classes" && (
+                        <div className="p-5 bg-slate-50 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                          {train.classes.map((cls) => {
+                            const isWL = cls.available === 0 && (cls.waitlist ?? 0) > 0;
+                            const isRAC = cls.available === 0 && (cls.rac ?? 0) > 0 && !isWL;
+                            return (
+                              <div key={cls.type} className="bg-white rounded-xl p-4 text-center border border-slate-100">
+                                <div className="text-xs text-slate-400 mb-1" style={{ fontWeight: 600 }}>{cls.label}</div>
+                                <div className="text-blue-600 text-lg" style={{ fontWeight: 700 }}>₹{cls.price}</div>
+                                <div className="text-xs mt-1 space-y-0.5">
+                                  {cls.available > 0 && (
+                                    <div className={cls.available < 10 ? "text-orange-500" : "text-emerald-600"} style={{ fontWeight: 600 }}>
+                                      AVBL {cls.available}
+                                    </div>
+                                  )}
+                                  {isRAC && (
+                                    <div className="text-amber-500" style={{ fontWeight: 600 }}>RAC {cls.rac}</div>
+                                  )}
+                                  {isWL && (
+                                    <div className="text-red-500" style={{ fontWeight: 600 }}>WL {cls.waitlist}</div>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => !isWL && handleSelectTrain(train, cls.type)}
+                                  disabled={isWL}
+                                  className="mt-2 w-full py-1.5 rounded-lg bg-blue-600 text-white text-xs hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  style={{ fontWeight: 600 }}
+                                >
+                                  {isWL ? "Waitlisted" : "Book"}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Route Tab */}
+                      {(expandedTab[train.id] || "classes") === "route" && (() => {
+                        const stops = getTrainStops(train.number);
+                        return (
+                          <div className="p-5 bg-slate-50">
+                            {stops.length === 0 ? (
+                              <p className="text-slate-400 text-sm text-center py-4">Route information not available</p>
+                            ) : (
+                              <div className="relative">
+                                {stops.map((stop, idx) => (
+                                  <div key={stop.code} className="flex gap-4 items-start mb-0">
+                                    {/* Timeline */}
+                                    <div className="flex flex-col items-center" style={{ minWidth: 20 }}>
+                                      <div className={`w-3 h-3 rounded-full border-2 mt-1 flex-shrink-0 ${
+                                        idx === 0 ? "bg-blue-600 border-blue-600"
+                                        : idx === stops.length - 1 ? "bg-indigo-600 border-indigo-600"
+                                        : "bg-white border-slate-300"
+                                      }`} />
+                                      {idx < stops.length - 1 && (
+                                        <div className="w-px flex-1 bg-slate-200 my-1" style={{ minHeight: 28 }} />
+                                      )}
+                                    </div>
+                                    {/* Stop Info */}
+                                    <div className={`flex-1 pb-4 ${idx === stops.length - 1 ? "pb-0" : ""}`}>
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <span className="text-sm text-slate-800" style={{ fontWeight: 600 }}>{stop.station}</span>
+                                          <span className="ml-2 text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{stop.code}</span>
+                                          {stop.day > 1 && (
+                                            <span className="ml-1 text-xs text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded">Day {stop.day}</span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-3 text-xs text-slate-500">
+                                          {stop.arrival !== "—" && <span>Arr: <span style={{ fontWeight: 600 }}>{stop.arrival}</span></span>}
+                                          {stop.departure !== "—" && <span>Dep: <span style={{ fontWeight: 600 }}>{stop.departure}</span></span>}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-1 mt-0.5">
+                                        <MapPin className="w-3 h-3 text-slate-300" />
+                                        <span className="text-xs text-slate-400">{stop.distance} km from origin</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </motion.div>
                   )}
                 </AnimatePresence>
